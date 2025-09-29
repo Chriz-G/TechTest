@@ -1,6 +1,9 @@
+using System;
 using System.Linq;
+using UserManagement.Domain.Models;
 using UserManagement.Models;
 using UserManagement.Services.Domain.Implementations;
+using UserManagement.Services.Domain.Interfaces;
 
 namespace UserManagement.Data.Tests;
 
@@ -17,7 +20,7 @@ public class UserServiceTests
         var result = service.GetAll();
 
         // Assert: Verifies that the action of the method under test behaves as expected.
-        result.Should().BeSameAs(users);
+        result.Should().BeEquivalentTo(users);
     }
 
     private IQueryable<User> SetupUsers(string forename = "Johnny", string surname = "User", string email = "juser@example.com", bool isActive = true)
@@ -41,5 +44,21 @@ public class UserServiceTests
     }
 
     private readonly Mock<IDataContext> _dataContext = new();
-    private UserService CreateService() => new(_dataContext.Object);
+    private readonly Mock<IMappingService> _mappingService = new();
+    private UserService CreateService()
+    {
+        SetupMapper();
+        return new UserService(_dataContext.Object, _mappingService.Object);
+    }
+    private void SetupMapper() =>
+        _mappingService.Setup(x => x.Map<User, UserModel>(It.IsAny<User>()))
+            .Returns(new Func<User, UserModel>(user => new UserModel
+            {
+                Id = user.Id,
+                Forename = user.Forename,
+                Surname = user.Surname,
+                Email = user.Email,
+                IsActive = user.IsActive,
+                DateOfBirth = user.DateOfBirth
+            }));
 }
